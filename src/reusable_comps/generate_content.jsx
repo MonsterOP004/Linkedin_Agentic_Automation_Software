@@ -1,19 +1,57 @@
 // generate_content.jsx
-import React, { useState } from 'react'; // Import useState
+import React, { useState } from 'react';
 import axios from 'axios';
 import { LuBrainCircuit } from "react-icons/lu";
 
 
-const GenerateContent = ({ handleChange, formData = {} }) => {
+const GenerateContent = ({ handleChange, formData = {}, contentType = 'text' }) => {
   // New state to control visibility of post content and store generated text
   const [showPostContent, setShowPostContent] = useState(false);
   const [generatedText, setGeneratedText] = useState('');
 
+    // Local handleChange for this component's inputs
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        let newValue = value;
+
+        // Specific validation for 'word_limit'
+        if (name === 'word_limit') {
+            const numValue = parseInt(value, 10);
+            if (!isNaN(numValue)) { // Check if it's a valid number
+                newValue = Math.min(numValue, 400); // Ensure it doesn't exceed 400
+                if (newValue < 1) { // Also ensure it's not less than 1 (as per your min="1")
+                    newValue = 1;
+                }
+            } else if (value === '') { // Allow clearing the input
+                newValue = '';
+            } else { // If it's not a number and not empty, set to a default or previous valid state
+                newValue = formData.word_limit || ''; // Revert to current or empty
+            }
+        }
+        
+        // Call the parent's handleChange with the potentially modified value
+        handleChange({ target: { name, value: newValue } });
+    };
+
+
   const handleGenerateClick = async () => {
-    const { topic, description, tone, audience, intent, word_limit } = formData;
+    const { topic, description, tone, audience, intent, word_limit, url } = formData;
+
+    // Validate word_limit here again to be safe, especially if the user tries to bypass client-side limits
+    const parsedWordLimit = parseInt(word_limit, 10);
+    if (isNaN(parsedWordLimit) || parsedWordLimit < 1 || parsedWordLimit > 400) {
+        alert('Please enter a valid word limit between 1 and 400.');
+        return;
+    }
 
     if (!topic || !description || !tone || !audience || !intent || !word_limit) {
       alert('Please fill in all content generation fields.');
+      return;
+    }
+
+    // For URL, Image, and Video content types, check if URL is provided
+    if ((contentType === 'url' || contentType === 'image' || contentType === 'video') && !url) {
+      alert('Please provide a URL for this content type.');
       return;
     }
 
@@ -23,8 +61,14 @@ const GenerateContent = ({ handleChange, formData = {} }) => {
       tone,
       audience,
       intent,
-      word_limit: parseInt(word_limit, 10), // Added radix for safety
+      word_limit: parsedWordLimit,
+      type: contentType, // Add the content type
     };
+
+    // Add URL parameter only for non-text content types
+    if (contentType === 'url' || contentType === 'image' || contentType === 'video') {
+      payload.url = url;
+    }
 
     try {
       // Temporarily clear previous generated content and hide the section
@@ -106,26 +150,44 @@ const GenerateContent = ({ handleChange, formData = {} }) => {
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Topic
+            Topic [What is the main topic of the post?]
           </label>
           <input
             type="text"
             name="topic"
             value={formData.topic || ''}
-            onChange={handleChange}
+            onChange={handleInputChange} 
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="e.g., The Future of AI"
           />
         </div>
 
+        {/* Conditionally render URL field for non-text content types */}
+        {(contentType === 'url' || contentType === 'image' || contentType === 'video') && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {contentType === 'url' ? 'URL' : contentType === 'image' ? 'Image URL' : 'Video URL'}
+            </label>
+            <input
+              type="url"
+              name="url"
+              value={formData.url || ''}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder={`Enter ${contentType} URL`}
+              required
+            />
+          </div>
+        )}
+
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Description
+            Description [Provide a brief description of the content you want to generate from Agentic AI.]
           </label>
           <textarea
             name="description"
             value={formData.description || ''}
-            onChange={handleChange}
+            onChange={handleInputChange}
             rows={3}
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Provide a brief description of the content you want to generate. e.g., Discuss the potential impact of AI on various industries and daily life."
@@ -134,12 +196,12 @@ const GenerateContent = ({ handleChange, formData = {} }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tone
+            Tone [Select the tone for the generated content.]
           </label>
           <select
             name="tone"
             value={formData.tone || ''}
-            onChange={handleChange}
+            onChange={handleInputChange} 
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Select tone...</option>
@@ -153,13 +215,13 @@ const GenerateContent = ({ handleChange, formData = {} }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Audience
+            Audience [Specify the target audience]
           </label>
           <input
             type="text"
             name="audience"
             value={formData.audience || ''}
-            onChange={handleChange}
+            onChange={handleInputChange} 
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="e.g., Tech enthusiasts, general public"
           />
@@ -167,12 +229,12 @@ const GenerateContent = ({ handleChange, formData = {} }) => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Intent
+            Intent [Select the intent for the generated content.]
           </label>
           <select
             name="intent"
             value={formData.intent || ''}
-            onChange={handleChange}
+            onChange={handleInputChange} 
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           >
             <option value="">Select intent...</option>
@@ -192,9 +254,9 @@ const GenerateContent = ({ handleChange, formData = {} }) => {
             type="number"
             name="word_limit"
             value={formData.word_limit || ''}
-            onChange={handleChange}
+            onChange={handleInputChange} 
             min="1"
-            max="10000"
+            max="400"
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="e.g., 500"
           />
@@ -222,7 +284,7 @@ const GenerateContent = ({ handleChange, formData = {} }) => {
           <textarea
             name="post_content"
             value={formData.post_content || ''} // Still link to parent's formData
-            onChange={handleChange} // Allow parent to handle changes
+            onChange={handleInputChange} // Allow parent to handle changes, but pass through local handler first
             rows={8} // Increased rows for better viewing of generated content
             className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             placeholder="Your generated content will appear here..."
