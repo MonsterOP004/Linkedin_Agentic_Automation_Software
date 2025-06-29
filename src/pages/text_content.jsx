@@ -8,7 +8,7 @@ const TextContent = ({ handleChange, formData = {} }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent page reload
+    e.preventDefault();
     setStatusMessage('');
     setIsSubmitting(true);
 
@@ -28,17 +28,12 @@ const TextContent = ({ handleChange, formData = {} }) => {
         'https://linkedin-post-automation-server.onrender.com/post_linkedin_text_content',
         payload,
         {
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
         }
       );
 
       if (response.status === 200) {
         setStatusMessage('✅ Content uploaded successfully to LinkedIn!');
-        // Optionally reset form fields here if desired
-        // handleChange({ target: { name: 'post_content', value: '' } });
-        // handleChange({ target: { name: 'post_visibility', value: '' } });
       } else {
         setStatusMessage(`❗ Unexpected status: ${response.status}. Please try again.`);
       }
@@ -64,21 +59,41 @@ const TextContent = ({ handleChange, formData = {} }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Text Content</h2>
-
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6 bg-white p-8 rounded-2xl shadow-lg border border-gray-200"
+    >
+      <div className="flex items-center space-x-4">
+        <h2 className="text-3xl font-bold text-gray-900">📜 Text Post Generator</h2>
+        <div className="flex-1 h-px bg-gradient-to-r from-blue-500 to-purple-500 opacity-20" />
+      </div>
       <div className="grid gap-6 md:grid-cols-2">
-        <GenerateContent 
-          handleChange={handleChange} 
-          formData={formData} 
-          contentType="text" 
+        <GenerateContent
+          handleChange={handleChange}
+          formData={formData}
+          contentType="text"
         />
         <Visibility handleChange={handleChange} formData={formData} />
       </div>
 
       {statusMessage && (
-        <div className="text-sm font-medium mt-4 p-3 rounded-md bg-gray-100 border border-gray-300 text-gray-700">
-          {statusMessage}
+        <div
+          className={`flex items-center gap-3 text-sm font-semibold mt-4 p-4 rounded-lg border 
+            ${statusMessage.includes('✅')
+              ? 'bg-green-50 border-green-300 text-green-800'
+              : statusMessage.includes('❗')
+                ? 'bg-yellow-50 border-yellow-300 text-yellow-800'
+                : statusMessage.includes('❌')
+                  ? 'bg-red-50 border-red-300 text-red-800'
+                  : 'bg-gray-50 border-gray-200 text-gray-800'
+            }
+          `}
+          role="alert"
+        >
+          <span aria-hidden="true" className="text-lg">
+            {statusMessage.includes('✅') ? '✔️' : statusMessage.includes('❌') ? '❌' : '⚠️'}
+          </span>
+          <p>{statusMessage}</p>
         </div>
       )}
 
@@ -86,11 +101,41 @@ const TextContent = ({ handleChange, formData = {} }) => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
-          }`}
+          className={`w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-5 rounded-xl font-semibold shadow-md transition duration-300 ease-in-out
+            focus:outline-none focus:ring-4 focus:ring-blue-400 focus:ring-opacity-60
+            ${isSubmitting
+              ? 'opacity-60 cursor-not-allowed'
+              : 'hover:from-blue-700 hover:to-blue-800 hover:shadow-lg transform hover:-translate-y-0.5'
+            }
+          `}
         >
-          {isSubmitting ? 'Posting...' : 'Post Content'}
+          {isSubmitting ? (
+            <span className="flex items-center justify-center space-x-2">
+              <svg
+                className="animate-spin h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                />
+              </svg>
+              <span>Posting...</span>
+            </span>
+          ) : (
+            'Post Content'
+          )}
         </button>
       </div>
     </form>

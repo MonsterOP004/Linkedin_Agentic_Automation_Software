@@ -1,31 +1,27 @@
 import React, { useState } from 'react';
-import axios from 'axios'; // Import axios for the LinkedIn post
+import axios from 'axios';
 import GenerateContent from '../reusable_comps/generate_content';
 import Visibility from '../reusable_comps/visibility';
+import { CheckCircle, AlertTriangle, Loader2 } from 'lucide-react';
 
 const ImageContent = ({ handleChange, formData = {} }) => {
   const [uploadedImageUrls, setUploadedImageUrls] = useState([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState(null);
-
-  // States for LinkedIn post status
   const [statusMessage, setStatusMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // New handler specifically for file input to manage multiple files and limit
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files); // Convert FileList to an array
+    const files = Array.from(e.target.files);
 
     if (files.length > 6) {
       alert("You can upload a maximum of 6 images.");
-      e.target.value = null; // Clears the selected files from the input element
-      handleChange({ target: { name: e.target.name, value: [] } }); // Updates formData to an empty array
-      setUploadedImageUrls([]); // Clear previously uploaded URLs if new files exceed limit
+      e.target.value = null;
+      handleChange({ target: { name: e.target.name, value: [] } });
+      setUploadedImageUrls([]);
       return;
     }
-    // Update the formData state with the array of selected files
     handleChange({ target: { name: e.target.name, value: files } });
-    // Reset uploaded URLs and error when new files are selected
     setUploadedImageUrls([]);
     setUploadError(null);
   };
@@ -41,10 +37,10 @@ const ImageContent = ({ handleChange, formData = {} }) => {
 
     const uploadPromises = formData.post_image.map(async (file) => {
       const form = new FormData();
-      form.append('file', file); // 'file' should match the field name expected by your FastAPI backend
+      form.append('file', file);
 
       try {
-        const response = await fetch('https://image-video-url-generator.onrender.com/upload-image/', { // Added trailing slash
+        const response = await fetch('https://image-video-url-generator.onrender.com/upload-image/', {
           method: 'POST',
           body: form,
         });
@@ -55,7 +51,7 @@ const ImageContent = ({ handleChange, formData = {} }) => {
         }
 
         const data = await response.json();
-        return data.url; // Assuming your API returns { url: "..." }
+        return data.url;
       } catch (error) {
         console.error("Error uploading image:", file.name, error);
         throw new Error(`Failed to upload ${file.name}: ${error.message}`);
@@ -65,40 +61,30 @@ const ImageContent = ({ handleChange, formData = {} }) => {
     try {
       const urls = await Promise.all(uploadPromises);
       setUploadedImageUrls(urls);
-      // Pass the uploaded URLs to the parent component's formData
-      // This is crucial: the actual image URLs are now in formData.image_urls
       handleChange({ target: { name: 'image_urls', value: urls } });
-      // Also set the first URL as the main URL for content generation (if 'generate_content' needs it)
       if (urls.length > 0) {
         handleChange({ target: { name: 'url', value: urls[0] } });
       }
-      alert("Images uploaded successfully!");
     } catch (error) {
       setUploadError(error.message);
-      setUploadedImageUrls([]); // Clear URLs if any upload fails
-      handleChange({ target: { name: 'image_urls', value: [] } }); // Clear parent's image_urls on error
+      setUploadedImageUrls([]);
+      handleChange({ target: { name: 'image_urls', value: [] } });
     } finally {
       setIsUploading(false);
     }
   };
 
-  // Handler for posting to LinkedIn
   const handleSubmit = async (e) => {
-    e.preventDefault(); // Prevent page reload
+    e.preventDefault();
     setStatusMessage('');
     setIsSubmitting(true);
 
     const payload = {
       post_content: formData.post_content,
-      post_image: uploadedImageUrls, // Use the URLs obtained from Cloudinary upload
+      post_image: uploadedImageUrls,
       post_visibility: formData.post_visibility,
     };
 
-    // --- Debugging Line ---
-    console.log('Payload being sent to FastAPI:', payload); //
-    // --- End Debugging Line ---
-
-    // --- Validation for LinkedIn Post ---
     if (!payload.post_content) {
       setStatusMessage('❗ Please generate content before posting.');
       setIsSubmitting(false);
@@ -114,49 +100,27 @@ const ImageContent = ({ handleChange, formData = {} }) => {
       setIsSubmitting(false);
       return;
     }
-    // --- End Validation ---
 
     try {
       const response = await axios.post(
         'https://linkedin-post-automation-server.onrender.com/post_linkedin_image_content',
         payload,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
+        { headers: { 'Content-Type': 'application/json' } }
       );
 
       if (response.status === 200) {
         setStatusMessage('✅ Image content uploaded successfully to LinkedIn!');
-        // Optionally reset form fields here if desired after successful post
-        // handleChange({ target: { name: 'post_content', value: '' } });
-        // handleChange({ target: { name: 'image_urls', value: [] } });
-        // setUploadedImageUrls([]);
-        // handleChange({ target: { name: 'post_visibility', value: '' } });
-        // Also clear generation fields if needed
-        // handleChange({ target: { name: 'topic', value: '' } });
-        // handleChange({ target: { name: 'description', value: '' } });
-        // handleChange({ target: { name: 'tone', value: '' } });
-        // handleChange({ target: { name: 'audience', value: '' } });
-        // handleChange({ target: { name: 'intent', value: '' } });
-        // handleChange({ target: { name: 'word_limit', value: '' } });
-
       } else {
         setStatusMessage(`❗ Unexpected status: ${response.status}. Please try again.`);
       }
     } catch (error) {
-      console.error('Error uploading image content to LinkedIn:', error);
-
       if (axios.isAxiosError(error)) {
         if (error.response) {
-          setStatusMessage(
-            `❌ Server error (${error.response.status}): ${error.response.data?.detail || error.response.statusText}`
-          );
+          setStatusMessage(`❌ Server error (${error.response.status}): ${error.response.data?.detail || error.response.statusText}`);
         } else if (error.request) {
-          setStatusMessage('❌ No response from LinkedIn server. Please check your connection.');
+          setStatusMessage('❌ No response from server. Please check your connection.');
         } else {
-          setStatusMessage(`❌ Request setup error: ${error.message}`);
+          setStatusMessage(`❌ Request error: ${error.message}`);
         }
       } else {
         setStatusMessage(`❌ Unexpected error: ${error.message}`);
@@ -167,44 +131,46 @@ const ImageContent = ({ handleChange, formData = {} }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6"> {/* Changed div to form */}
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Image Content</h2>
+    <form onSubmit={handleSubmit} className="max-w-7xl mx-auto p-8 space-y-10 bg-white rounded-3xl shadow-xl border border-gray-100">
+      <div className="flex items-center space-x-4">
+        <h2 className="text-3xl font-bold text-gray-900">📸 Image Post Generator</h2>
+        <div className="flex-1 h-px bg-gradient-to-r from-blue-500 to-purple-500 opacity-20" />
+      </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-10 md:grid-cols-2">
 
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="md:col-span-2 space-y-4">
+          <label className="block text-base font-semibold text-gray-700">
             Upload Images (Max 6)
           </label>
-          <div className="relative">
-            <input
-              type="file"
-              name="post_image"
-              onChange={handleFileChange}
-              accept="image/*"
-              multiple
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
-          </div>
-          {/* Display names of selected files */}
-          {formData.post_image && Array.isArray(formData.post_image) && formData.post_image.length > 0 && (
-            <div className="mt-2 text-sm text-gray-600">
-              Selected Images:
-              <ul className="list-disc list-inside ml-4">
+          <input
+            type="file"
+            name="post_image"
+            onChange={handleFileChange}
+            accept="image/*"
+            multiple
+            className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 focus:outline-none"
+          />
+
+          {formData.post_image?.length > 0 && (
+            <div className="text-sm text-gray-700">
+              <p className="font-medium mt-2">Selected Images:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mt-2">
                 {formData.post_image.map((file, index) => (
-                  <li key={index}>{file.name}</li>
+                  <div key={index} className="bg-gray-100 p-1 rounded-md shadow-sm text-center text-xs truncate">
+                    {file.name}
+                  </div>
                 ))}
-              </ul>
+              </div>
               <button
-                type="button" // Important: change to type="button" to prevent form submission
+                type="button"
                 onClick={handleConfirmAndUpload}
                 disabled={isUploading}
-                className={`mt-4 py-2 px-4 rounded-md text-white font-medium transition-colors ${
-                  isUploading
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2'
+                className={`mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-white font-semibold ${
+                  isUploading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
                 }`}
               >
+                {isUploading ? <Loader2 className="animate-spin h-4 w-4" /> : '✔️'}
                 {isUploading ? 'Uploading...' : 'Confirm and Upload Images'}
               </button>
               {uploadError && (
@@ -212,51 +178,53 @@ const ImageContent = ({ handleChange, formData = {} }) => {
               )}
             </div>
           )}
-          {formData.post_image && !Array.isArray(formData.post_image) && (
-              <p className="mt-2 text-sm text-gray-600">
-                Selected Image: {formData.post_image.name}
-              </p>
-          )}
 
           {uploadedImageUrls.length > 0 && (
-            <div className="mt-4 text-sm text-green-700">
-              <p>Uploaded Image URLs:</p>
-              <ul className="list-disc list-inside ml-4">
-                {uploadedImageUrls.map((url, index) => (
-                  <li key={index}><a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">{url}</a></li>
+            <div className="mt-4">
+              <p className="text-sm font-medium text-green-700 mb-2 flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" /> Uploaded Image URLs
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {uploadedImageUrls.map((url, idx) => (
+                  <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                    <img src={url} alt={`Uploaded ${idx}`} className="rounded-lg border hover:shadow-lg transition-all" />
+                  </a>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>
 
-        {/* GenerateContent component with contentType="image" */}
-        <GenerateContent
-          handleChange={handleChange}
-          formData={formData}
-          contentType="image"
-        />
-
-        {/* Visibility component */}
+        <GenerateContent handleChange={handleChange} formData={formData} contentType="image" />
         <Visibility handleChange={handleChange} formData={formData} />
 
       </div>
 
       {statusMessage && (
-        <div className="text-sm font-medium mt-4 p-3 rounded-md bg-gray-100 border border-gray-300 text-gray-700">
+        <div className={`flex items-center gap-3 p-4 rounded-lg text-sm font-medium ${
+          statusMessage.includes('✅')
+            ? 'bg-green-50 border border-green-200 text-green-700'
+            : 'bg-red-50 border border-red-200 text-red-700'
+        }`}>
+          {statusMessage.includes('✅') ? <CheckCircle className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
           {statusMessage}
         </div>
       )}
 
-      <div className="pt-6">
+      <div>
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+          className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all duration-300 ${
+            isSubmitting ? 'bg-blue-400 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700'
           }`}
         >
-          {isSubmitting ? 'Posting...' : 'Post Content'}
+          {isSubmitting ? (
+            <span className="flex items-center justify-center gap-2">
+              <Loader2 className="animate-spin h-5 w-5" />
+              Posting...
+            </span>
+          ) : '🚀 Post to LinkedIn'}
         </button>
       </div>
     </form>

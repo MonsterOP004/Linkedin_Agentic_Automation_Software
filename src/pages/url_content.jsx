@@ -93,8 +93,10 @@ const URLContent = ({ handleChange, formData = {} }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">URL Content</h2>
-
+      <div className="flex items-center space-x-4">
+        <h2 className="text-3xl font-bold text-gray-900">🌐 URL Post Generator</h2>
+        <div className="flex-1 h-px bg-gradient-to-r from-blue-500 to-purple-500 opacity-20" />
+      </div>
       <div className="grid gap-6 md:grid-cols-2">
         {/* GenerateContent component now handles Topic and URL input */}
         <GenerateContent
@@ -117,9 +119,8 @@ const URLContent = ({ handleChange, formData = {} }) => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className={`w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
-          }`}
+          className={`w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'
+            }`}
         >
           {isSubmitting ? 'Posting...' : 'Post Content'}
         </button>
